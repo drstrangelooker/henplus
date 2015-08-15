@@ -71,8 +71,13 @@ public class SQLSession implements Interruptable {
             } else {
                 HenPlus.msg().println("no transactions.");
             }
+        } catch (final SQLException ignoreMe) {
+        }
+
+        try {
             _conn.setAutoCommit(false);
         } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("setAutoCommit not supported");
         }
 
         printTransactionIsolation(meta, Connection.TRANSACTION_NONE, "No Transaction", currentIsolation);
@@ -95,15 +100,21 @@ public class SQLSession implements Interruptable {
 
     private void printTransactionIsolation(final DatabaseMetaData meta, final int iLevel, final String descript, final int current)
             throws SQLException {
-        if (meta.supportsTransactionIsolationLevel(iLevel)) {
-            HenPlus.msg().println(" " + descript + (current == iLevel ? " *" : " "));
+        try {
+            if (meta.supportsTransactionIsolationLevel(iLevel)) {
+                HenPlus.msg().println(" " + descript + (current == iLevel ? " *" : " "));
+            }
+        } catch (final SQLException ignoreMe) {
         }
     }
 
     private void addAvailableIsolation(final Map<String,Integer> result, final DatabaseMetaData meta, final int iLevel, final String key)
             throws SQLException {
-        if (meta.supportsTransactionIsolationLevel(iLevel)) {
-            result.put(key, new Integer(iLevel));
+        try {
+            if (meta.supportsTransactionIsolationLevel(iLevel)) {
+                result.put(key, new Integer(iLevel));
+            }
+        } catch (final SQLException ignoreMe) {
         }
     }
 
@@ -309,6 +320,56 @@ public class SQLSession implements Interruptable {
     public Connection getConnection() {
         return _conn;
     }
+    
+    public void commit() {
+        try {
+            getConnection().commit();
+        } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("commit not supported");
+        }
+    }
+
+    public void rollback() {
+        try {
+            getConnection().rollback();
+        } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("rollback not supported");
+        }
+    }
+
+    public boolean getAutoCommit() {
+        try {
+            return getConnection().getAutoCommit();
+        } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("getAutoCommit not supported");
+        }
+        return false;
+    }
+
+    public void setAutoCommit(boolean flag) {
+        try {
+            getConnection().setAutoCommit(flag);
+        } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("setAutoCommit not supported");
+        }
+    }
+
+    public boolean isReadOnly() {
+        try {
+            return getConnection().isReadOnly();
+        } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("isReadOnly not supported");
+        }
+        return false;
+    }
+
+    public void setReadOnly(boolean flag) {
+        try {
+            getConnection().setReadOnly(flag);
+        } catch (final SQLException ignoreMe) {
+            HenPlus.msg().println("setReadOnly not supported");
+        }
+    }
 
     public Statement createStatement() {
         Statement result = null;
@@ -354,7 +415,7 @@ public class SQLSession implements Interruptable {
              * readonly requires a closed transaction.
              */
             if (!switchOn) {
-                getConnection().rollback(); // save choice.
+                rollback(); // save choice.
             } else {
                 /*
                  * if we switched off and the user has not closed the current
@@ -362,9 +423,9 @@ public class SQLSession implements Interruptable {
                  * will notify the user about what to do..
                  */
             }
-            getConnection().setReadOnly(switchOn);
-            if (getConnection().isReadOnly() != switchOn) {
-                throw new Exception("JDBC-Driver ignores request; transaction closed before ?");
+            setReadOnly(switchOn);
+            if (isReadOnly() != switchOn) {
+                HenPlus.msg().println("JDBC-Driver ignores request; transaction closed before ?");
             }
         }
 
@@ -394,11 +455,11 @@ public class SQLSession implements Interruptable {
              * since the user asks for autocommit..
              */
             if (switchOn) {
-                getConnection().commit();
+                commit();
             }
-            getConnection().setAutoCommit(switchOn);
-            if (getConnection().getAutoCommit() != switchOn) {
-                throw new Exception("JDBC-Driver ignores request");
+            setAutoCommit(switchOn);
+            if (getAutoCommit() != switchOn) {
+                HenPlus.msg().println("JDBC-Driver ignores request");
             }
         }
 
@@ -448,7 +509,7 @@ public class SQLSession implements Interruptable {
             final int isolation = isolationLevel.intValue();
             getConnection().setTransactionIsolation(isolation);
             if (getConnection().getTransactionIsolation() != isolation) {
-                throw new Exception("JDBC-Driver ignores request");
+                HenPlus.msg().println("JDBC-Driver ignores request");
             }
         }
 
