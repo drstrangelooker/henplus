@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
+import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -86,16 +87,21 @@ public class ConnectCommand extends AbstractCommand {
                 final BufferedReader in = new BufferedReader(new InputStreamReader(inStream, "UTF-8"));
                 String urlLine;
                 while ((urlLine = in.readLine()) != null) {
-                    final StringTokenizer tok = new StringTokenizer(urlLine);
+                    final String[] tok;
+                    try {
+                        tok = urlLine.split("\\s+",2);
+                    } catch (PatternSyntaxException pse) {
+                      return;
+                    }
                     String url;
                     String alias;
-                    final int tokNum = tok.countTokens();
+                    final int tokNum = tok.length;
                     if (tokNum == 1) {
-                        url = tok.nextToken();
+                        url = tok[0];
                         alias = url;
                     } else if (tokNum == 2) {
-                        url = tok.nextToken();
-                        alias = tok.nextToken();
+                        url = tok[0];
+                        alias = tok[1];
                     } else {
                         continue;
                     }
@@ -103,6 +109,15 @@ public class ConnectCommand extends AbstractCommand {
                 }
             }
         });
+    }
+
+    @Override
+    public boolean isComplete(String command) {
+        if (!command.toUpperCase().startsWith("CONNECT"))
+            return true;
+        if (command.endsWith(";"))
+            return false;
+        return true;
     }
 
     @Override
